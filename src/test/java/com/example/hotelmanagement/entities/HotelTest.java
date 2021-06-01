@@ -1,18 +1,10 @@
 package com.example.hotelmanagement.entities;
 
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.test.context.junit4.SpringRunner;
 
-
-/************  NOTE ****************/
-
-/*
-
-As We are printing the Result not able to add assert
-When we are converting this into an api which returns value we shall add Asserts
-
-*/
 
 @RunWith(SpringRunner.class)
 public class HotelTest {
@@ -30,6 +22,24 @@ public class HotelTest {
         hotel.onMovement(2,1);
         hotel.onMovement(2,3);
 
+        Assert.assertTrue(hotel.getFloor(1).getSubCorridor(3).isAcOn());
+        Assert.assertTrue(hotel.getFloor(1).getSubCorridor(3).isLightOn());
+
+        Assert.assertTrue(hotel.getFloor(1).getSubCorridor(1).isAcOn());
+        Assert.assertTrue(hotel.getFloor(1).getSubCorridor(1).isLightOn());
+
+        Assert.assertFalse(hotel.getFloor(1).getSubCorridor(2).isAcOn());
+        Assert.assertFalse(hotel.getFloor(1).getSubCorridor(2).isLightOn());
+
+
+        Assert.assertTrue(hotel.getFloor(2).getSubCorridor(1).isAcOn());
+        Assert.assertTrue(hotel.getFloor(2).getSubCorridor(1).isLightOn());
+
+        Assert.assertTrue(hotel.getFloor(2).getSubCorridor(3).isAcOn());
+        Assert.assertTrue(hotel.getFloor(2).getSubCorridor(3).isLightOn());
+
+        Assert.assertFalse(hotel.getFloor(2).getSubCorridor(2).isAcOn());
+        Assert.assertFalse(hotel.getFloor(2).getSubCorridor(2).isLightOn());
     }
 
     @Test
@@ -42,6 +52,14 @@ public class HotelTest {
 
         // Only Long running ac will be turned off As turning off light wont be a good user experience. Can change according to requirement
 
+        Assert.assertTrue(hotel.getFloor(1).getSubCorridor(3).isLightOn());
+        Assert.assertFalse(hotel.getFloor(1).getSubCorridor(3).isAcOn());
+
+        Assert.assertTrue(hotel.getFloor(1).getSubCorridor(1).isLightOn());
+        Assert.assertTrue(hotel.getFloor(1).getSubCorridor(1).isAcOn());
+
+        Assert.assertTrue(hotel.getFloor(1).getSubCorridor(2).isLightOn());
+        Assert.assertTrue(hotel.getFloor(1).getSubCorridor(2).isAcOn());
     }
 
     @Test
@@ -51,6 +69,10 @@ public class HotelTest {
         hotel.onMovement(1,1);
 
         // As it is only one corridor Turning on the ac and Light
+
+        Assert.assertTrue(hotel.getFloor(1).getSubCorridor(1).isLightOn());
+        Assert.assertTrue(hotel.getFloor(1).getSubCorridor(1).isAcOn());
+
     }
 
     @Test
@@ -64,6 +86,15 @@ public class HotelTest {
         Thread.sleep(10000); // no movement for 10 seconds
 
         hotel.onNoMovement();
+
+        Assert.assertFalse(hotel.getFloor(1).getSubCorridor(3).isLightOn());
+        Assert.assertTrue(hotel.getFloor(1).getSubCorridor(3).isAcOn());
+
+        Assert.assertFalse(hotel.getFloor(1).getSubCorridor(1).isLightOn());
+        Assert.assertTrue(hotel.getFloor(1).getSubCorridor(1).isAcOn());
+
+        Assert.assertFalse(hotel.getFloor(1).getSubCorridor(2).isLightOn());
+        Assert.assertTrue(hotel.getFloor(1).getSubCorridor(2).isAcOn());
 
     }
 
@@ -82,9 +113,29 @@ public class HotelTest {
 
         hotel.onNoMovement();
 
+        Assert.assertTrue(hotel.getFloor(1).getSubCorridor(3).isAcOn());
+        Assert.assertFalse(hotel.getFloor(1).getSubCorridor(3).isLightOn());
+
+        Assert.assertTrue(hotel.getFloor(1).getSubCorridor(1).isAcOn());
+        Assert.assertFalse(hotel.getFloor(1).getSubCorridor(1).isLightOn());
+
+        Assert.assertTrue(hotel.getFloor(1).getSubCorridor(2).isAcOn());
+        Assert.assertFalse(hotel.getFloor(1).getSubCorridor(2).isLightOn());
+
+
+        Assert.assertTrue(hotel.getFloor(2).getSubCorridor(1).isAcOn());
+        Assert.assertTrue(hotel.getFloor(2).getSubCorridor(1).isLightOn());
+
+        Assert.assertTrue(hotel.getFloor(2).getSubCorridor(3).isAcOn());
+        Assert.assertTrue(hotel.getFloor(2).getSubCorridor(3).isLightOn());
+
+        Assert.assertFalse(hotel.getFloor(2).getSubCorridor(2).isAcOn());
+        Assert.assertFalse(hotel.getFloor(2).getSubCorridor(2).isLightOn());
+
     }
 
 
+    @Test
     public void testInvalidFloorAndCorridorId() {
 
         hotel = Hotel.setUpHotel(1 , 1,1,60);
@@ -92,6 +143,8 @@ public class HotelTest {
         hotel.onMovement(3,1);  // Invalid Floor Id
         hotel.onMovement(1,4);  // Invalid Corridor Id
 
+        Assert.assertTrue(hotel.getFloor(1).getSubCorridor(1).isAcOn());
+        Assert.assertFalse(hotel.getFloor(1).getSubCorridor(1).isLightOn());
     }
 
 

@@ -1,172 +1,246 @@
 package com.example.hotelmanagement.entities;
 
 import com.example.hotelmanagement.enums.DeviceType;
-import com.example.hotelmanagement.enums.Power;
-import com.example.hotelmanagement.util.HMUtil;
+import com.example.hotelmanagement.util.CorridorComparatorOnLastMovement;
 
 import java.util.*;
 
 public class Floor {
 
-    private int floorId;
-    private int noOfMainCorridors;
-    private int noOfSubCorridors;
     private int currentPowerConsumption;
-    private int maxcurrentPowerConsumption;
+    private int maxPowerConsumption;
 
-    private HashMap<String,String> lightAcMapping ;
+    private List<Corridor> mainCorridors;
 
-    private Map<String, Device> devices ;
+    private List<Corridor> subCorridors;
 
-    private Deque<String> activeAc ;
+    // To turn of the AC of a SubCorridor which was Not used for a Longer time to Optimise Power
+    private Deque<Corridor> subCorridorsWithAcOn ;
 
-    public static Floor setUpNewFloor(int floorId,int noOfMainCorridors, int noOfSubCorridors){
+
+    // To Turn off the lights on No movement
+    private Queue<Corridor> subCorridorsWithLightsOn ;
+
+
+   /*  Mapping of SubCorridor AC which was turned off During turning ON of the light in a SubCorridor
+        On no movement AC from this corridor will be Turned On */
+    private HashMap<Corridor,Corridor> corridorMapping ;
+
+
+    public static Floor setUpNewFloor(int noOfMainCorridors, int noOfSubCorridors){
 
         Floor floor =  new Floor();
 
-        floor.floorId = floorId;
-        floor.noOfMainCorridors = noOfMainCorridors;
-        floor.noOfSubCorridors = noOfSubCorridors;
+        floor.maxPowerConsumption =   noOfMainCorridors * (DeviceType.AC.getUnit() + DeviceType.LIGHT.getUnit()) + ( noOfSubCorridors * DeviceType.AC.getUnit() );
+        floor.currentPowerConsumption =   floor.maxPowerConsumption;
 
-        floor.lightAcMapping =  new HashMap<>();
-        floor.devices = new HashMap<>();
-        floor.activeAc = new LinkedList<>();
+        floor.mainCorridors = setUpMainCorridors(noOfMainCorridors);
+        floor.subCorridors = setUpSubCorridors(noOfSubCorridors);
 
-        floor.maxcurrentPowerConsumption =   noOfMainCorridors * (DeviceType.AC.getUnit() + DeviceType.LIGHT.getUnit()) + ( noOfSubCorridors * DeviceType.AC.getUnit() );
-        floor.currentPowerConsumption =   floor.maxcurrentPowerConsumption;
+        floor.subCorridorsWithAcOn = new LinkedList<>(floor.subCorridors);
+        floor.subCorridorsWithLightsOn = new PriorityQueue<>(new CorridorComparatorOnLastMovement());
 
-        setUpDevicesForSubCorridors(floor);
+        floor.corridorMapping =  new HashMap<>();
 
         return floor;
     }
 
-    private static void setUpDevicesForSubCorridors(Floor floor) {
 
-        for(int corridorId = 1 ; corridorId <= floor.noOfSubCorridors ; corridorId++){
+    private static List<Corridor> setUpMainCorridors(int numberOfCorridors) {
 
-            String acId = HMUtil.formAcId(floor.floorId,corridorId);
+        List<Corridor> corridors = new ArrayList<>();
 
-            Device ac = new Device(acId,DeviceType.AC, Power.ON);
-            floor.devices.put(ac.getDeviceId(),ac);
-
-            floor.activeAc.add(ac.getDeviceId());
-
-            String lightId = HMUtil.formLightId(floor.floorId,corridorId);
-
-            Device light = new Device(lightId,DeviceType.LIGHT,Power.OFF);
-            floor.devices.put(light.getDeviceId(),light);
+        for(int corridorNo = 0 ; corridorNo < numberOfCorridors ; corridorNo++){
+            corridors.add(Corridor.setupMainCorridor());
         }
+
+        return corridors;
+    }
+
+    private static List<Corridor> setUpSubCorridors(int numberOfCorridors) {
+
+        List<Corridor> corridors = new ArrayList<>();
+
+        for(int corridorNo = 0 ; corridorNo < numberOfCorridors ; corridorNo++){
+            corridors.add(Corridor.setupSubCorridor());
+        }
+
+        return corridors;
     }
 
 
-    public Device turnOnCorridor(int corridorId){
+    /* Turns Light ON of a Corridor On Movement and Turns of Other corridors AC
+        which was Not used for the longest time on the same floor */
 
-        if(corridorId > noOfSubCorridors || corridorId < 1){
+    public Corridor turnOnCorridor(int corridorId){
+
+        if(corridorId > subCorridors.size() || corridorId < 0){
             System.out.println("\n\nInvalid CorridorNumber Number ");
             return null;
         }
 
-        String lightID =  HMUtil.formLightId(floorId,corridorId);
+       Corridor corridor =  this.subCorridors.get(corridorId);
 
-        String corridorAcId = HMUtil.formAcId(floorId,corridorId);
+        if(checkIfPowerReduceRequired(corridor)) {
+            turnOffOtherCorridorAc(corridor);
+        }
 
-        if(checkIfPowerReduceRequired(lightID,corridorAcId))
-            turnOffOtherCorridorAc(corridorAcId);
+        turnLightOn(corridor);
+        turnAcOn(corridor);
 
-        lightAcMapping.put(lightID, corridorAcId);
-
-        powerOn(lightID);
-        powerOn(corridorAcId);
-
-        return devices.get(lightID);
+        return corridor;
     }
 
-    private boolean checkIfPowerReduceRequired(String lightID, String corridorAcId) {
+
+
+    public boolean checkIfPowerReduceRequired(Corridor corridor) {
 
         int totalConsumption = currentPowerConsumption;
 
-        if(Power.OFF.equals(devices.get(lightID).getPower())){
+        if(!corridor.isLightOn()){
             totalConsumption += DeviceType.LIGHT.getUnit();
         }
 
-        if(Power.OFF.equals(devices.get(corridorAcId).getPower())){
+        if(!corridor.isAcOn()){
             totalConsumption += DeviceType.AC.getUnit();
         }
 
-
-        return  totalConsumption > maxcurrentPowerConsumption ;
+        return  totalConsumption > maxPowerConsumption ;
 
     }
 
-    public void restoreToDefault(String lightId) {
-        powerOff(lightId);
-        powerOn(lightAcMapping.get(lightId));
+    public void onNoMovement(int maxInactiveSeconds){
+
+        boolean onChange = false;
+
+        while (!subCorridorsWithLightsOn.isEmpty()){
+            Corridor corridor = subCorridorsWithLightsOn.peek();
+
+            if(corridor.isNoMovement(maxInactiveSeconds)){
+                restoreToDefault(corridor);
+                onChange =  true;
+            }else {
+                break;
+            }
+        }
+
+        if(onChange) {
+            System.out.println("\n\nOn No movement :");
+            printFloorStatus();
+        }
     }
+
 
     public void printFloorStatus() {
 
-        System.out.println("Floor "+floorId);
+        System.out.println("Max Power Per floor : "+maxPowerConsumption+" Current PowerUsage : "+ currentPowerConsumption);
 
-        System.out.println("Max Power Per floor : "+maxcurrentPowerConsumption+" Current PowerUsage : "+ currentPowerConsumption);
-
-        for(int mainCorridor = 1 ; mainCorridor <= noOfMainCorridors ; mainCorridor++){
-            System.out.println("Main corridor  Light " + mainCorridor + ": ON AC: ON ");
+        for(Corridor mainCorridor : mainCorridors){
+            System.out.println("Main corridor  Light " + mainCorridor.isLightOn() + ": ON AC: " + mainCorridor.isAcOn());
         }
 
-        for(int subCorridor = 1 ; subCorridor <= noOfSubCorridors ; subCorridor++){
+        int i = 0;
 
-            String lightId = HMUtil.formLightId(floorId,subCorridor);
-            String acId =   HMUtil.formAcId(floorId,subCorridor);
-
-            System.out.println("Sub corridor  Light " + subCorridor + ": " + devices.get(lightId).getPower() + " AC:" + devices.get(acId).getPower());
+        for(Corridor subCorridor : subCorridors){
+            System.out.println("Sub corridor  Light " + i++ + ": " + subCorridor.isLightOn() + " AC:" + subCorridor.isAcOn());
         }
 
     }
 
-    private void powerOn(String deviceID){
+    private void turnLightOn(Corridor corridor){
 
-        Device device = devices.get(deviceID);
+        if(!corridor.isLightOn()) {
+            currentPowerConsumption+=DeviceType.LIGHT.getUnit();
+            corridor.turnLightOn();
 
-        if(Power.OFF.equals(device.getPower())) {
-            currentPowerConsumption+=device.getDeviceType().getUnit();
-        }
-        device.powerOn();
-
-        if(device.getDeviceType().equals(DeviceType.AC))
-        {
-            activeAc.remove(deviceID);
-            activeAc.add(deviceID);
         }
 
-    }
+        // To Update the last used time
 
-    private void powerOff(String deviceID){
+        subCorridorsWithLightsOn.remove(corridor);
 
-        Device device = devices.get(deviceID);
+        corridor.updateLastMovement();
 
-        if(Power.ON.equals(device.getPower())) {
-            currentPowerConsumption-=device.getDeviceType().getUnit();
-        }
-        device.powerOff();
-
-        if(device.getDeviceType().equals(DeviceType.AC))
-        {
-            activeAc.remove(deviceID);
-        }
-
+        subCorridorsWithLightsOn.add(corridor);
     }
 
 
-    private void turnOffOtherCorridorAc(String corridorAcId) {
+    private void turnLightOff(Corridor corridor){
 
-        if(!activeAc.isEmpty()) {
-            String otherAcId = activeAc.poll();
-            if (otherAcId.equals(corridorAcId)) {
-                otherAcId = activeAc.poll();
+        if(corridor.isLightOn()) {
+            currentPowerConsumption-=DeviceType.LIGHT.getUnit();
+        }
+
+        corridor.turnLightOff();
+        subCorridorsWithLightsOn.remove(corridor);
+    }
+
+
+    private void turnAcOn(Corridor corridor){
+
+        if(!corridor.isAcOn()) {
+            currentPowerConsumption+=DeviceType.AC.getUnit();
+        }
+
+        corridor.turnAcOn();
+
+        // To Update the last used
+
+        subCorridorsWithAcOn.remove(corridor);
+        subCorridorsWithAcOn.add(corridor);
+
+    }
+
+    private void turnAcOff(Corridor corridor){
+
+        if(corridor.isAcOn()) {
+            currentPowerConsumption-=DeviceType.AC.getUnit();
+        }
+        corridor.turnAcOff();
+        subCorridorsWithAcOn.remove(corridor);
+
+    }
+
+    /* Method to check AC which was Not used for long time
+        and also not to turn of AC of same corridor */
+
+    private Corridor turnOffOtherCorridorAc(Corridor corridor) {
+
+        if(!subCorridorsWithAcOn.isEmpty()) {
+            Corridor otherCorridor = subCorridorsWithAcOn.poll();
+            if (otherCorridor == corridor ) {
+                otherCorridor = subCorridorsWithAcOn.poll();
             }
 
-            if(otherAcId!=null) // In case of No active ac other than the current corridor
-                powerOff(otherAcId);
+            if(otherCorridor!=null) {// In case of No active ac other than the current corridor
+                turnAcOff(otherCorridor);
+                corridorMapping.put(corridor,otherCorridor) ;
+                return otherCorridor;
+            }
         }
+
+        return null;
     }
+
+
+    /* To restore to default state on No Movement */
+
+    private void restoreToDefault(Corridor corridor){
+
+        turnLightOff(corridor);
+
+        if(corridorMapping.containsKey(corridor)){
+            turnAcOn(corridorMapping.get(corridor));
+            corridorMapping.remove(corridor);
+        }
+
+    }
+
+
+    public Corridor getSubCorridor(int id) {
+        if(id>0 && id <= subCorridors.size())
+            return subCorridors.get(id-1);
+        else return null;
+    }
+
 }

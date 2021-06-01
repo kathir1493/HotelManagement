@@ -8,20 +8,28 @@ import java.time.Instant;
 import java.util.Objects;
 
 @Data
-public class Device implements Comparable<Device>{
+public class Device {
 
-    String deviceId;
     DeviceType deviceType;
     Instant lastUsed;
     Power power;
 
-
-    public  Device(String deviceId,DeviceType deviceType,Power power) {
-        this.deviceId = deviceId;
-        this.deviceType = deviceType;
-        this.power = power;
-        this.lastUsed = Instant.now();
+    public static Device setUpAc(Power power) {
+        return setUpDevice(DeviceType.AC,power);
     }
+
+    public static Device setUpLight(Power power) {
+        return setUpDevice(DeviceType.LIGHT,power);
+    }
+
+    private static Device setUpDevice(DeviceType deviceType,Power power) {
+        Device device =  new Device();
+        device.deviceType = deviceType;
+        device.power = power;
+        device.lastUsed = Instant.now();
+        return device;
+    }
+
 
     public void powerOn(){
         this.power = Power.ON;
@@ -33,21 +41,9 @@ public class Device implements Comparable<Device>{
         lastUsed = Instant.now();
     }
 
-    @Override
-    public int compareTo(Device o) {
-        return this.getLastUsed().compareTo(o.lastUsed);
+
+    public boolean isDeviceOn(){
+       return  Power.ON.equals(this.getPower());
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Device device = (Device) o;
-        return Objects.equals(deviceId, device.deviceId);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(deviceId);
-    }
 }
