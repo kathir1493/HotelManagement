@@ -1,6 +1,5 @@
 package com.example.hotelmanagement.entities;
 
-import com.example.hotelmanagement.enums.DeviceType;
 import com.example.hotelmanagement.util.CorridorComparatorOnLastMovement;
 
 import java.util.*;
@@ -31,7 +30,7 @@ public class Floor {
 
         Floor floor =  new Floor();
 
-        floor.maxPowerConsumption =   noOfMainCorridors * (DeviceType.AC.getUnit() + DeviceType.LIGHT.getUnit()) + ( noOfSubCorridors * DeviceType.AC.getUnit() );
+        floor.maxPowerConsumption =   noOfMainCorridors * (Device.getAcUnit() + Device.getLightUnit()) + ( noOfSubCorridors * Device.getAcUnit() );
         floor.currentPowerConsumption =   floor.maxPowerConsumption;
 
         floor.mainCorridors = setUpMainCorridors(noOfMainCorridors);
@@ -98,11 +97,11 @@ public class Floor {
         int totalConsumption = currentPowerConsumption;
 
         if(!corridor.isLightOn()){
-            totalConsumption += DeviceType.LIGHT.getUnit();
+            totalConsumption += Device.getLightUnit();
         }
 
         if(!corridor.isAcOn()){
-            totalConsumption += DeviceType.AC.getUnit();
+            totalConsumption += Device.getAcUnit();
         }
 
         return  totalConsumption > maxPowerConsumption ;
@@ -139,7 +138,7 @@ public class Floor {
             System.out.println("Main corridor  Light " + mainCorridor.isLightOn() + ": ON AC: " + mainCorridor.isAcOn());
         }
 
-        int i = 0;
+        int i = 1;
 
         for(Corridor subCorridor : subCorridors){
             System.out.println("Sub corridor  Light " + i++ + ": " + subCorridor.isLightOn() + " AC:" + subCorridor.isAcOn());
@@ -150,7 +149,7 @@ public class Floor {
     private void turnLightOn(Corridor corridor){
 
         if(!corridor.isLightOn()) {
-            currentPowerConsumption+=DeviceType.LIGHT.getUnit();
+            currentPowerConsumption+=Device.getLightUnit();
             corridor.turnLightOn();
 
         }
@@ -168,7 +167,7 @@ public class Floor {
     private void turnLightOff(Corridor corridor){
 
         if(corridor.isLightOn()) {
-            currentPowerConsumption-=DeviceType.LIGHT.getUnit();
+            currentPowerConsumption-=Device.getLightUnit();
         }
 
         corridor.turnLightOff();
@@ -179,7 +178,7 @@ public class Floor {
     private void turnAcOn(Corridor corridor){
 
         if(!corridor.isAcOn()) {
-            currentPowerConsumption+=DeviceType.AC.getUnit();
+            currentPowerConsumption+=Device.getAcUnit();
         }
 
         corridor.turnAcOn();
@@ -194,7 +193,7 @@ public class Floor {
     private void turnAcOff(Corridor corridor){
 
         if(corridor.isAcOn()) {
-            currentPowerConsumption-=DeviceType.AC.getUnit();
+            currentPowerConsumption-=Device.getAcUnit();
         }
         corridor.turnAcOff();
         subCorridorsWithAcOn.remove(corridor);

@@ -9,6 +9,6 @@ public class CorridorComparatorOnLastMovement implements Comparator<Corridor> {
 
     @Override
     public int compare(Corridor o1, Corridor o2) {
-        return o1.getLastMovement().compareTo(o2.getLastMovement());
+        return o2.getLastMovement().compareTo(o1.getLastMovement());
     }
 }

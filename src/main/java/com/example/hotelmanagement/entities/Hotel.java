@@ -39,7 +39,7 @@ public class Hotel {
             return;
         }
 
-        System.out.println("\n\nOn Movement : Floor : "+ (floorId +1) + " Sub corridor Id :" + (subCorridorId+1) );
+        System.out.println("\n\nOn Movement : Floor : "+ floorId + " Sub corridor Id :" + subCorridorId );
 
         Floor floor = floors.get(floorId-1);
 

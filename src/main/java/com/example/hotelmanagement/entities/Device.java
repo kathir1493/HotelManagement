@@ -1,17 +1,14 @@
 package com.example.hotelmanagement.entities;
 
-import com.example.hotelmanagement.enums.DeviceType;
 import com.example.hotelmanagement.enums.Power;
 import lombok.Data;
 
 import java.time.Instant;
-import java.util.Objects;
 
 @Data
 public class Device {
 
     DeviceType deviceType;
-    Instant lastUsed;
     Power power;
 
     public static Device setUpAc(Power power) {
@@ -26,24 +23,48 @@ public class Device {
         Device device =  new Device();
         device.deviceType = deviceType;
         device.power = power;
-        device.lastUsed = Instant.now();
         return device;
     }
 
 
     public void powerOn(){
         this.power = Power.ON;
-        lastUsed = Instant.now();
     }
 
     public void powerOff(){
         this.power = Power.OFF;
-        lastUsed = Instant.now();
     }
 
 
     public boolean isDeviceOn(){
        return  Power.ON.equals(this.getPower());
     }
+
+
+    public static int getAcUnit(){
+        return DeviceType.AC.getUnit();
+    }
+
+    public static int getLightUnit(){
+        return DeviceType.LIGHT.getUnit();
+    }
+
+
+    enum  DeviceType {
+        AC(10),LIGHT(5);
+
+        int unit;
+
+        DeviceType(int unit) {
+            this.unit = unit;
+        }
+
+        public int getUnit(){
+            return this.unit;
+        }
+
+    }
+
+
 
 }

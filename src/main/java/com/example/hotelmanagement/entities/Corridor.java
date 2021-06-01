@@ -1,7 +1,6 @@
 package com.example.hotelmanagement.entities;
 
 
-import com.example.hotelmanagement.enums.CorridorType;
 import com.example.hotelmanagement.enums.Power;
 
 import java.time.Instant;
@@ -78,4 +77,9 @@ public class Corridor {
     public Instant getLastMovement() {
         return lastMovement;
     }
+
+    enum CorridorType {
+        MAIN,SUB;
+    }
+
 }
